@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import re
 from typing import Any
 
 from fastapi import APIRouter
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
 from omnibot.core.coordination_kernel import CoordinationKernel
 
@@ -24,6 +25,17 @@ def dashboard_router(kernel: CoordinationKernel) -> APIRouter:
     async def task_trace(task_id: str):
         events = [event.model_dump() for event in await kernel.event_bus.replay(task_id=task_id)]
         return _build_trace(task_id, events)
+
+    @router.get("/api/trace/{task_id}/export.md")
+    async def export_trace_markdown(task_id: str):
+        events = [event.model_dump() for event in await kernel.event_bus.replay(task_id=task_id)]
+        trace = _build_trace(task_id, events)
+        filename = _export_filename(trace)
+        return Response(
+            content=_trace_to_markdown(trace),
+            media_type="text/markdown; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     @router.get("/api/traces")
     async def traces(limit: int = 200):
@@ -81,6 +93,151 @@ def _build_trace(task_id: str, events: list[dict[str, Any]]) -> dict[str, Any]:
             for e in events
         ],
     }
+
+
+def _export_filename(trace: dict[str, Any]) -> str:
+    request_text = trace.get("request") or "omnibot-trace"
+    timestamp = (trace.get("timestamp") or "")[:10] or "undated"
+    task_id = str(trace.get("task_id", "task"))[-8:]
+    slug = _slugify(request_text)
+    return f"{timestamp}-omnibot-{slug}-{task_id}.md"
+
+
+def _slugify(text: str, max_length: int = 54) -> str:
+    lowered = text.lower()
+    words = re.findall(r"[a-z0-9]+", lowered)
+    stop = {
+        "the", "a", "an", "and", "or", "to", "of", "in", "on", "for", "me",
+        "why", "what", "tell", "look", "at", "then", "please", "are", "is",
+    }
+    useful = [word for word in words if word not in stop]
+    selected = []
+    for word in useful or words[:8]:
+        candidate = "-".join([*selected, word])
+        if len(candidate) > max_length:
+            break
+        selected.append(word)
+    slug = "-".join(selected or (useful or words[:1]))[:max_length].strip("-")
+    return slug or "trace"
+
+
+def _trace_to_markdown(trace: dict[str, Any]) -> str:
+    arbiter = trace.get("arbiter") or {}
+    score = arbiter.get("coherence_score") or {}
+    agents = trace.get("agents") or []
+    tools = trace.get("tools") or []
+    artifacts = trace.get("artifacts") or []
+    memories = trace.get("memory_writes") or []
+    chain = trace.get("causal_chain") or []
+
+    lines = [
+        f"# OmniBot Debug Report: {trace.get('request', 'Untitled Trace')}",
+        "",
+        f"- **Task:** `{trace.get('task_id', '')}`",
+        f"- **Status:** {trace.get('status', 'unknown')}",
+        f"- **Timestamp:** {trace.get('timestamp', 'unknown')}",
+        f"- **Export filename:** `{_export_filename(trace)}`",
+        "",
+        "## Arbiter Decision",
+        "",
+        arbiter.get("final_answer", "No final answer recorded."),
+        "",
+        f"- **Selected agents:** {', '.join(arbiter.get('selected_agents', [])) or 'none'}",
+        f"- **Confidence:** {arbiter.get('confidence', 0):.2f}",
+        "",
+        "### Why This Answer",
+        "",
+        arbiter.get("rationale", "No rationale recorded."),
+        "",
+        "## Coherence Score",
+        "",
+        f"- **Overall:** {score.get('overall', 0):.2f}",
+        f"- **Evidence coverage:** {score.get('evidence_coverage', 0):.2f}",
+        f"- **Agent agreement:** {score.get('agent_agreement', 0):.2f}",
+        f"- **Tool provenance:** {score.get('tool_provenance', 0):.2f}",
+        f"- **Confidence spread:** {score.get('confidence_spread', 0):.2f}",
+        f"- **Unresolved risk:** {score.get('unresolved_risk', 0):.2f}",
+        "",
+        "## Agent Execution",
+        "",
+    ]
+
+    for agent in agents:
+        lines.extend(
+            [
+                f"### {agent.get('agent_name', 'agent')} ({agent.get('role', 'role')})",
+                "",
+                f"- **Confidence:** {agent.get('confidence', 0):.2f}",
+                f"- **Tools:** {', '.join(agent.get('tool_calls', [])) or 'none'}",
+                f"- **Sources:** {', '.join(agent.get('sources', [])) or 'none'}",
+                "",
+                agent.get("summary", ""),
+                "",
+            ]
+        )
+
+    lines.extend(["## Tool Calls", ""])
+    for tool in tools:
+        lines.extend(
+            [
+                f"### {tool.get('tool_name', 'tool')}",
+                "",
+                "```json",
+                _json_dump(tool.get("result", {})),
+                "```",
+                "",
+            ]
+        )
+
+    lines.extend(["## Patch Artifacts", ""])
+    if artifacts:
+        for artifact in artifacts:
+            lines.extend(
+                [
+                    f"### {artifact.get('path', 'artifact')}",
+                    "",
+                    "```diff",
+                    artifact.get("content", ""),
+                    "```",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["No patch artifacts recorded.", ""])
+
+    lines.extend(["## Memory Impact", ""])
+    for memory in memories:
+        lines.extend(
+            [
+                f"### {memory.get('memory_id', 'memory')}",
+                "",
+                memory.get("content", ""),
+                "",
+                f"- **Provenance:** `{memory.get('source_event_id', '')}`",
+                "",
+            ]
+        )
+    if not memories:
+        lines.extend(["No memory writes recorded.", ""])
+
+    lines.extend(["## Audit Ledger", ""])
+    for event in chain:
+        parents = ", ".join(event.get("parents", [])) or "none"
+        lines.extend(
+            [
+                f"- `{event.get('type')}` `{event.get('event_id')}`",
+                f"  - parents: {parents}",
+                f"  - audit: `{event.get('audit_hash')}`",
+            ]
+        )
+
+    return "\n".join(lines).strip() + "\n"
+
+
+def _json_dump(value: Any) -> str:
+    import json
+
+    return json.dumps(value, indent=2, default=str)
 
 
 DASHBOARD_HTML = """
@@ -287,6 +444,31 @@ DASHBOARD_HTML = """
       flex-wrap: wrap;
       color: var(--muted);
       font-size: 12px;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    .export-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      padding: 8px 12px;
+      border: 1px solid rgba(212,175,55,.44);
+      border-radius: 6px;
+      color: var(--gold-soft);
+      text-decoration: none;
+      background: linear-gradient(180deg, rgba(29,42,66,.96), rgba(13,20,38,.96));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 8px 22px rgba(0,0,0,.22);
+      transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+    }
+    .export-link:hover {
+      transform: translateY(-1px);
+      border-color: rgba(242,213,122,.78);
+      box-shadow: 0 0 18px rgba(212,175,55,.18);
     }
     .seal {
       justify-self: end;
@@ -779,6 +961,7 @@ DASHBOARD_HTML = """
           <div>
             <p class="task-title">${esc(trace.request || 'Request unavailable')}</p>
             <div class="meta-row"><span class="pill">${esc(trace.status || 'unknown')}</span><span>${esc(trace.task_id)}</span><span>${esc(formatTime(trace.timestamp))}</span></div>
+            <div class="hero-actions"><a class="export-link" href="/api/trace/${encodeURIComponent(trace.task_id)}/export.md">Export Debug Report (.md)</a></div>
           </div>
           <div class="seal"><div class="small">Overall Coherence</div><div class="overall">${Number(score.overall || 0).toFixed(2)}</div><div class="small">${esc((score.notes || [])[0] || 'trace ready')}</div></div>
         </section>

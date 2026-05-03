@@ -222,6 +222,24 @@ OMNIBOT_ENABLE_PYTHON=false
 
 Current sandbox status is intentionally explicit: filesystem paths are workspace-scoped and shell/Python run with workspace `cwd` plus guardrails, but this is not a hard container or VM sandbox.
 
+## v0.1.9 Adds
+
+- Each trace can be exported as a Markdown debug report.
+- Export endpoint:
+
+```text
+GET /api/trace/{task_id}/export.md
+```
+
+- The dashboard includes an **Export Debug Report (.md)** button for the selected trace.
+- Filenames are auto-generated from timestamp, request text, and task id, for example:
+
+```text
+2026-05-03-omnibot-file-test-py-tests-failing-propose-fix-90abcdef.md
+```
+
+Exports include the arbiter decision, coherence score, agent summaries, tool calls, patch artifacts, memory impact, and audit ledger.
+
 ## What Was Cherry-Picked From Forge
 
 The code is fresh, but these patterns were adapted from Grok-Party-Pack:
