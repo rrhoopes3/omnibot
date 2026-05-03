@@ -114,6 +114,48 @@ flowchart TD
     EB --> UI
 ```
 
+## Demo Use Cases
+
+### 1. Debugging Companion
+
+**Positioning:** The AI that does not just suggest fixes. It shows you exactly how it got there.
+
+This is the strongest current demo. Ask OmniBot to inspect a failing test or bug report:
+
+```text
+Look at the file examples/broken_test/test.py and tell me why the tests are failing, then propose a fix.
+```
+
+OmniBot reads the referenced file, runs the targeted test, proposes a unified diff artifact, and shows the full trace: agent outputs, tool calls, arbiter rationale, coherence score, audit ledger, and sandbox state.
+
+### 2. Research Synthesizer
+
+**Positioning:** A small research team that shows its work and admits when it is uncertain.
+
+Use this when a knowledge worker needs a source-aware synthesis of a complex topic. OmniBot can split the question across agents, search the web, consult memory, and let the arbiter merge the findings with visible confidence and provenance.
+
+Example:
+
+```text
+Compare local-first AI tools vs cloud-only approaches. Include pros, cons, and key risks.
+```
+
+This path will get stronger as search providers, source cards, and conflict detection mature.
+
+### 3. Project Planner + Risk Auditor
+
+**Positioning:** A technical lead who plans carefully, surfaces risks early, and does not hide its reasoning.
+
+Use this when starting a feature, migration, or project. OmniBot can turn a goal into a phased plan, identify risky assumptions, and explain why the arbiter preferred one plan over alternatives.
+
+Example:
+
+```text
+I want to add a billing system to my SaaS. Give me a phased plan, highlight the riskiest parts, and tell me what to de-risk first.
+```
+
+This is the bigger product story: memory, provenance, risk flags, and transparent decision-making become more valuable across long-running work.
+
 ## v0.1.1 Adds
 
 - Real `/dashboard` page for the full trace.
