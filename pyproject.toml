@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omnibot"
-version = "0.1.4"
-description = "OmniBot v0.1.4 LM Studio fallback"
+version = "0.1.5"
+description = "OmniBot v0.1.5 lightweight install"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
     "aiosqlite>=0.20",
     "anyio>=4.0",
@@ -15,14 +15,18 @@ dependencies = [
     "uvicorn>=0.30",
     "pydantic>=2.7",
     "python-dotenv>=1.0",
-    "sentence-transformers>=3.0",
-    "gradio>=4.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
-    "ruff>=0.6",
+    "ruff>=0.6,<0.16",
+]
+embeddings = [
+    "sentence-transformers>=3.0,<6.0",
+]
+gradio = [
+    "gradio>=5.0,<6.0",
 ]
 
 [project.scripts]

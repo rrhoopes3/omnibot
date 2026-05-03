@@ -1,6 +1,6 @@
-# OmniBot v0.1.4 "LM Studio Fallback"
+# OmniBot v0.1.5 "Lightweight Install"
 
-OmniBot v0.1.4 proves one narrow thesis:
+OmniBot v0.1.5 proves one narrow thesis:
 
 > Parallel agents + explicit arbitration + memory + provenance = one coherent collaborator, not a swarm.
 
@@ -10,8 +10,21 @@ This is not a full framework. It is a small coordination substrate with an appen
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate
+.\.venv\Scripts\Activate.ps1
 pip install -e .[dev]
+```
+
+If PowerShell blocks activation, either run once:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+or skip activation and call the venv Python directly:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.\.venv\Scripts\python.exe main.py web --port 8000 --workspace .
 ```
 
 Primary model setup:
@@ -125,6 +138,13 @@ flowchart TD
 - Local fallback order is now LM Studio first, then Ollama.
 - `OMNIBOT_PROVIDER=lmstudio` runs local-first.
 - `.env.example` includes `LMSTUDIO_BASE_URL`, `OMNIBOT_LMSTUDIO_MODEL`, and optional `LMSTUDIO_API_KEY`.
+
+## v0.1.5 Adds
+
+- Default install is lightweight: no Gradio, Torch, Transformers, or sentence-transformers unless requested.
+- `sentence-transformers` moved to the optional `embeddings` extra.
+- Gradio moved to the optional `gradio` extra.
+- Python support lowered to `>=3.10` to match the current Windows dev environment.
 
 ## What Was Cherry-Picked From Forge
 
