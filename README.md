@@ -1,6 +1,6 @@
-# OmniBot v0.1.3 "xAI Default"
+# OmniBot v0.1.4 "LM Studio Fallback"
 
-OmniBot v0.1.3 proves one narrow thesis:
+OmniBot v0.1.4 proves one narrow thesis:
 
 > Parallel agents + explicit arbitration + memory + provenance = one coherent collaborator, not a swarm.
 
@@ -35,7 +35,17 @@ ollama pull llama3.2
 ollama serve
 ```
 
-The prototype defaults to xAI `grok-4.3`. If `XAI_API_KEY` is missing or the API call fails, it tries Ollama, then deterministic fallback logic.
+The prototype defaults to xAI `grok-4.3`. If `XAI_API_KEY` is missing or the API call fails, it tries LM Studio, then Ollama, then deterministic fallback logic.
+
+If you use LM Studio locally, start the LM Studio server and set:
+
+```bash
+OMNIBOT_PROVIDER=lmstudio
+OMNIBOT_LMSTUDIO_MODEL=your-loaded-model-id
+LMSTUDIO_BASE_URL=http://localhost:1234/v1
+```
+
+You can also leave `OMNIBOT_PROVIDER=xai`; OmniBot will try xAI first, then LM Studio, then Ollama, then deterministic fallback.
 
 CLI demo:
 
@@ -108,6 +118,13 @@ flowchart TD
 - Default model is `grok-4.3`.
 - `.env` loading is supported via `python-dotenv`.
 - `.env.example` documents xAI, Ollama fallback, and optional search provider keys.
+
+## v0.1.4 Adds
+
+- LM Studio support through its OpenAI-compatible `/v1/chat/completions` API.
+- Local fallback order is now LM Studio first, then Ollama.
+- `OMNIBOT_PROVIDER=lmstudio` runs local-first.
+- `.env.example` includes `LMSTUDIO_BASE_URL`, `OMNIBOT_LMSTUDIO_MODEL`, and optional `LMSTUDIO_API_KEY`.
 
 ## What Was Cherry-Picked From Forge
 
