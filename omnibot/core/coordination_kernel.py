@@ -13,7 +13,7 @@ from omnibot.core.memory_fabric import MemoryFabric
 from omnibot.core.presence_layer import PresenceLayer
 from omnibot.core.tool_bus import ToolBus
 from omnibot.models.registry import ModelRegistry
-from omnibot.schemas.events import AgentResult, ArbiterDecision, Task
+from omnibot.schemas.events import AgentResult, ArbiterDecision, CoherenceScore, Task
 
 
 class CoordinationKernel:
@@ -130,10 +130,12 @@ class CoordinationKernel:
             for r in ranked[2:]
         ]
         final_answer = self._synthesize(user_request, selected, results)
+        coherence_score = self._score_coherence(results)
         rationale = (
             f"Selected {', '.join(r.agent_name for r in selected)} because they provided the strongest "
             "combination of direct evidence, tool use, and task classification. "
-            f"Rejected {', '.join(r.agent_name for r in ranked[2:]) or 'none'} as secondary context."
+            f"Rejected {', '.join(r.agent_name for r in ranked[2:]) or 'none'} as secondary context. "
+            f"Overall coherence score: {coherence_score.overall:.2f}."
         )
         confidence = round(sum(r.confidence for r in selected) / max(1, len(selected)), 2)
         return ArbiterDecision(
@@ -142,8 +144,60 @@ class CoordinationKernel:
             rejected_alternatives=rejected,
             rationale=rationale,
             confidence=confidence,
+            coherence_score=coherence_score,
             final_answer=final_answer,
             source_event_ids=[event_id for r in results for event_id in r.event_ids],
+        )
+
+    def _score_coherence(self, results: list[AgentResult]) -> CoherenceScore:
+        if not results:
+            return CoherenceScore(notes=["No agent results were available."])
+
+        evidence_coverage = sum(1 for r in results if r.evidence) / len(results)
+        tool_provenance = min(1.0, sum(len(r.tool_calls) for r in results) / 3)
+
+        confidences = [r.confidence for r in results]
+        spread = max(confidences) - min(confidences)
+        confidence_spread = max(0.0, 1.0 - spread)
+
+        source_sets = [set(r.sources) for r in results if r.sources]
+        if len(source_sets) < 2:
+            agent_agreement = 0.5 if source_sets else 0.0
+        else:
+            union = set().union(*source_sets)
+            overlap = set.intersection(*source_sets) if all(source_sets) else set()
+            agent_agreement = len(overlap) / len(union) if union else 0.0
+            if agent_agreement == 0 and any(r.evidence for r in results):
+                agent_agreement = 0.45
+
+        unresolved_risk = 0.0
+        notes = []
+        if any(r.error for r in results):
+            unresolved_risk += 0.25
+            notes.append("One or more agents returned errors.")
+        if not any(r.tool_calls for r in results):
+            unresolved_risk += 0.2
+            notes.append("No tools were used, so provenance is weaker.")
+        if any("failed" in " ".join(r.evidence).lower() for r in results):
+            unresolved_risk += 0.15
+            notes.append("Evidence contains a failed tool or test result.")
+        unresolved_risk = min(1.0, unresolved_risk)
+
+        overall = (
+            evidence_coverage * 0.28
+            + agent_agreement * 0.18
+            + tool_provenance * 0.24
+            + confidence_spread * 0.18
+            + (1.0 - unresolved_risk) * 0.12
+        )
+        return CoherenceScore(
+            evidence_coverage=round(evidence_coverage, 2),
+            agent_agreement=round(agent_agreement, 2),
+            tool_provenance=round(tool_provenance, 2),
+            confidence_spread=round(confidence_spread, 2),
+            unresolved_risk=round(unresolved_risk, 2),
+            overall=round(overall, 2),
+            notes=notes or ["No major unresolved risks detected by v0.1.1 heuristics."],
         )
 
     def _synthesize(self, user_request: str, selected: list[AgentResult], all_results: list[AgentResult]) -> str:
@@ -162,10 +216,17 @@ class CoordinationKernel:
             lines.append("")
             if debug_request:
                 lines.append("Proposed next move:")
-                lines.append(
-                    "Use the test output and referenced file content above as the fix target. "
-                    "v0.1 stops at diagnosis/proposal; enabling automatic edits should be a Tier 3 permission."
-                )
+                patch_count = len(coder.artifacts)
+                if patch_count:
+                    lines.append(
+                        f"I produced {patch_count} proposed patch artifact(s) as unified diffs. "
+                        "They are not applied automatically."
+                    )
+                else:
+                    lines.append(
+                        "Use the test output and referenced file content above as the fix target. "
+                        "No safe automatic patch pattern matched, so this stays as diagnosis."
+                    )
             else:
                 lines.append("Architecture direction:")
                 lines.append(

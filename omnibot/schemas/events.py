@@ -24,6 +24,7 @@ EventType = Literal[
     "agent.completed",
     "tool.called",
     "tool.completed",
+    "artifact.created",
     "arbiter.decided",
     "memory.written",
     "presence.responded",
@@ -68,8 +69,19 @@ class AgentResult(BaseModel):
     sources: list[str] = Field(default_factory=list)
     evidence: list[str] = Field(default_factory=list)
     tool_calls: list[str] = Field(default_factory=list)
+    artifacts: list[dict[str, Any]] = Field(default_factory=list)
     event_ids: list[str] = Field(default_factory=list)
     error: str | None = None
+
+
+class CoherenceScore(BaseModel):
+    evidence_coverage: float = 0.0
+    agent_agreement: float = 0.0
+    tool_provenance: float = 0.0
+    confidence_spread: float = 0.0
+    unresolved_risk: float = 0.0
+    overall: float = 0.0
+    notes: list[str] = Field(default_factory=list)
 
 
 class ArbiterDecision(BaseModel):
@@ -79,6 +91,7 @@ class ArbiterDecision(BaseModel):
     rejected_alternatives: list[dict[str, Any]] = Field(default_factory=list)
     rationale: str
     confidence: float
+    coherence_score: CoherenceScore = Field(default_factory=CoherenceScore)
     final_answer: str
     source_event_ids: list[str] = Field(default_factory=list)
 

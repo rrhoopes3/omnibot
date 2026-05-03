@@ -1,10 +1,10 @@
-# OmniBot v0.1 "Hello Coherence"
+# OmniBot v0.1.1 "Visible Arbiter"
 
-OmniBot v0.1 proves one narrow thesis:
+OmniBot v0.1.1 proves one narrow thesis:
 
 > Parallel agents + explicit arbitration + memory + provenance = one coherent collaborator, not a swarm.
 
-This is not a full framework. It is a small coordination substrate with an append-only event log, three starter agents, a visible arbiter, minimal memory, scoped tools, and chat/dashboard surfaces.
+This is not a full framework. It is a small coordination substrate with an append-only event log, three starter agents, a visible arbiter, minimal memory, scoped tools, patch artifacts, and a dashboard that makes the coherence loop inspectable.
 
 ## Run
 
@@ -26,7 +26,7 @@ The prototype runs without Ollama by using deterministic fallback logic.
 CLI demo:
 
 ```bash
-python main.py ask "Look at the file test.py and tell me why the tests are failing, then propose a fix."
+python main.py ask "Look at the file examples/broken_test/test.py and tell me why the tests are failing, then propose a fix." --workspace .
 ```
 
 Web API + dashboard:
@@ -38,7 +38,9 @@ python main.py web --port 8000
 Then open:
 
 - `POST http://127.0.0.1:8000/chat`
+- `GET http://127.0.0.1:8000/dashboard`
 - `GET http://127.0.0.1:8000/api/events`
+- `GET http://127.0.0.1:8000/api/traces`
 - `GET http://127.0.0.1:8000/api/memory`
 
 Optional Gradio surface:
@@ -61,11 +63,21 @@ flowchart TD
     C --> A
     A --> M["Memory Fabric<br/>episodic + vector recall"]
     A --> P["Presence Layer"]
-    T["Tool Bus<br/>filesystem + shell + python + search stub"] --> C
+    T["Tool Bus<br/>filesystem + shell + python + search"] --> C
     T --> S
     P --> UI["Chat response + dashboard trace"]
     EB --> UI
 ```
+
+## v0.1.1 Adds
+
+- Real `/dashboard` page for the full trace.
+- `CoherenceScore` with evidence coverage, agent agreement, tool provenance, confidence spread, unresolved risk, and overall score.
+- Coder-produced unified diff artifacts for obvious demo failures. They are never applied automatically.
+- Pluggable web search tool: Tavily, Brave, then DuckDuckGo Instant Answer fallback.
+- CLI flags can appear after the subcommand: `python main.py ask "..." --workspace .`.
+- Golden tests for causal parent visibility and audit hash validation.
+- `examples/broken_test/test.py` so the README demo works in a fresh clone.
 
 ## What Was Cherry-Picked From Forge
 
@@ -89,20 +101,28 @@ I treated this as: Intent: debug/code assistance. Referenced paths: test.py.
 What I found:
 - test.py:
   def add(a, b):
-      return a - b
+          return a - b
   ...
 - pytest result:
   returncode=1
   stdout=...
 
 Proposed next move:
-Use the test output and referenced file content above as the fix target.
+I produced 1 proposed patch artifact as a unified diff. It is not applied automatically.
 
 What I did:
 - Ran 3 agents in parallel: reflex, researcher, coder.
 - Used tools: read_file, run_command, web_search.
 - Sources: test.py, tool:python -m pytest -q, tool:web_search.
 - Arbiter confidence: 0.80.
+
+Coherence score:
+- Overall: 0.75
+- Evidence coverage: 1.00
+- Agent agreement: 0.45
+- Tool provenance: 1.00
+- Confidence spread: 0.60
+- Unresolved risk: 0.15
 
 Why this answer:
 Selected coder, reflex because they provided the strongest combination of direct evidence, tool use, and task classification.
@@ -116,6 +136,7 @@ task.created
 task.status queued/thinking/working/done
 agent.started x3
 tool.called / tool.completed
+artifact.created
 agent.completed x3
 arbiter.decided
 memory.written
@@ -130,12 +151,12 @@ Every row includes causal parents, payload, provenance, and an audit hash.
 pytest
 ```
 
-The golden test creates a broken `test.py`, asks the demo prompt, and asserts that the loop records three agent completions, an arbiter decision, a memory write, and a composed response.
+The golden tests create a broken `test.py`, ask the demo prompt, and assert that the loop records three agent completions, a patch artifact, an arbiter decision, a memory write, valid audit hashes, resolvable causal parents, and a composed response.
 
-## v0.1 Boundaries
+## v0.1.1 Boundaries
 
-- `web_search` is a stub.
+- `web_search` is intentionally minimal; configure `TAVILY_API_KEY` or `BRAVE_SEARCH_API_KEY` for stronger results.
 - The coder proposes; it does not edit files automatically.
-- The arbiter is heuristic, visible, and event-logged.
+- The arbiter is heuristic, scored, visible, and event-logged.
 - Memory uses `sentence-transformers` when available and a hash fallback otherwise.
-- The dashboard is intentionally API-first; a polished UI can sit on the same trace.
+- The dashboard is intentionally simple; a richer UI can sit on the same trace APIs.

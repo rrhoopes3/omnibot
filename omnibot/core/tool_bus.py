@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
+from urllib import parse, request
 
 from omnibot.core.event_bus import EventBus
 
@@ -170,7 +172,7 @@ class ToolBus:
         )
         self.register(
             "web_search",
-            "Placeholder search tool for v0.1; records that research was requested.",
+            "Search the web through Tavily, Brave, or DuckDuckGo Instant Answer fallback.",
             {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
             self.web_search,
         )
@@ -221,11 +223,125 @@ class ToolBus:
         return await self.run_command(f"python -c {escaped}")
 
     async def web_search(self, query: str) -> dict[str, Any]:
+        return await asyncio.to_thread(self._web_search_sync, query)
+
+    def _web_search_sync(self, query: str) -> dict[str, Any]:
+        providers = (self._search_tavily, self._search_brave, self._search_duckduckgo)
+        errors = []
+        for provider in providers:
+            try:
+                result = provider(query)
+                if result.get("status") == "ok":
+                    return result
+                if result.get("error"):
+                    errors.append(result["error"])
+            except Exception as exc:
+                errors.append(f"{provider.__name__}: {type(exc).__name__}: {exc}")
+        return {
+            "status": "failed",
+            "query": query,
+            "summary": "No web search provider returned usable results.",
+            "errors": errors,
+        }
+
+    def _search_tavily(self, query: str) -> dict[str, Any]:
+        api_key = os.getenv("TAVILY_API_KEY")
+        if not api_key:
+            return {"status": "skipped", "error": "TAVILY_API_KEY not set"}
+        payload = json.dumps(
+            {"api_key": api_key, "query": query, "search_depth": "basic", "max_results": 5}
+        ).encode("utf-8")
+        req = request.Request(
+            "https://api.tavily.com/search",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(req, timeout=12) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        results = [
+            {
+                "title": item.get("title", ""),
+                "url": item.get("url", ""),
+                "content": item.get("content", "")[:600],
+            }
+            for item in data.get("results", [])
+        ]
         return {
             "status": "ok",
+            "provider": "tavily",
             "query": query,
-            "summary": "Web search is a stub in v0.1. Wire this to an approved search provider later.",
+            "summary": data.get("answer") or self._summarize_results(results),
+            "results": results,
         }
+
+    def _search_brave(self, query: str) -> dict[str, Any]:
+        api_key = os.getenv("BRAVE_SEARCH_API_KEY")
+        if not api_key:
+            return {"status": "skipped", "error": "BRAVE_SEARCH_API_KEY not set"}
+        url = "https://api.search.brave.com/res/v1/web/search?" + parse.urlencode({"q": query, "count": 5})
+        req = request.Request(
+            url,
+            headers={"Accept": "application/json", "X-Subscription-Token": api_key},
+            method="GET",
+        )
+        with request.urlopen(req, timeout=12) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        results = [
+            {
+                "title": item.get("title", ""),
+                "url": item.get("url", ""),
+                "content": item.get("description", "")[:600],
+            }
+            for item in data.get("web", {}).get("results", [])
+        ]
+        return {
+            "status": "ok",
+            "provider": "brave",
+            "query": query,
+            "summary": self._summarize_results(results),
+            "results": results,
+        }
+
+    def _search_duckduckgo(self, query: str) -> dict[str, Any]:
+        url = "https://api.duckduckgo.com/?" + parse.urlencode(
+            {"q": query, "format": "json", "no_html": 1, "skip_disambig": 1}
+        )
+        req = request.Request(url, headers={"User-Agent": "OmniBot/0.1.1"}, method="GET")
+        with request.urlopen(req, timeout=12) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        related = data.get("RelatedTopics", [])
+        results = []
+        for item in related:
+            if "Topics" in item:
+                item = item["Topics"][0] if item["Topics"] else {}
+            if item.get("FirstURL") or item.get("Text"):
+                results.append(
+                    {
+                        "title": item.get("Text", "")[:90],
+                        "url": item.get("FirstURL", ""),
+                        "content": item.get("Text", "")[:600],
+                    }
+                )
+            if len(results) >= 5:
+                break
+        abstract = data.get("AbstractText", "")
+        return {
+            "status": "ok" if abstract or results else "failed",
+            "provider": "duckduckgo",
+            "query": query,
+            "summary": abstract or self._summarize_results(results),
+            "results": results,
+            "error": "" if abstract or results else "DuckDuckGo returned no abstract/results",
+        }
+
+    def _summarize_results(self, results: list[dict[str, str]]) -> str:
+        if not results:
+            return ""
+        return " | ".join(
+            f"{item.get('title', 'Untitled')}: {item.get('content', '')[:180]}"
+            for item in results[:3]
+        )
 
     def _resolve(self, path: str) -> Path:
         target = (self.workspace / path).resolve() if not Path(path).is_absolute() else Path(path).resolve()

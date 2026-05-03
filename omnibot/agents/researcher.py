@@ -23,8 +23,8 @@ class ResearcherAgent(BaseAgent):
             agent_name=self.name,
             role=self.role,
             summary=(
-                "Checked relevant memory and noted whether external research is needed. "
-                "For v0.1, web_search is a stub so source-grounding comes from local memory and tools."
+                "Checked relevant memory and queried the configured search provider chain "
+                f"({search.get('provider', 'no provider returned results')})."
             ),
             confidence=0.58 if memories else 0.42,
             sources=[m.memory_id for m in memories] + ["tool:web_search"],

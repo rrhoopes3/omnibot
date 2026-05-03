@@ -18,7 +18,7 @@ async def run_cli(args: argparse.Namespace) -> None:
     result = await kernel.handle_request(args.message)
     print(result["response"])
     print(f"\nTask: {result['task_id']}")
-    print("Dashboard events: run `python -m omnibot.main web` and open /api/events")
+    print("Dashboard: run `python main.py web` and open http://127.0.0.1:8000/dashboard")
 
 
 async def build_app(db_path: str, workspace: str) -> FastAPI:
@@ -35,19 +35,25 @@ def create_app(db_path: str = "omnibot.db", workspace: str = ".") -> FastAPI:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="OmniBot v0.1 Hello Coherence")
+    parser = argparse.ArgumentParser(description="OmniBot v0.1.1 Visible Arbiter")
     parser.add_argument("--db", default="omnibot.db")
     parser.add_argument("--workspace", default=str(Path.cwd()))
     sub = parser.add_subparsers(dest="command")
 
     chat = sub.add_parser("ask", help="Run one CLI request")
     chat.add_argument("message")
+    chat.add_argument("--db", default=argparse.SUPPRESS)
+    chat.add_argument("--workspace", default=argparse.SUPPRESS)
 
     web = sub.add_parser("web", help="Run FastAPI chat + dashboard")
     web.add_argument("--host", default="127.0.0.1")
     web.add_argument("--port", default=8000, type=int)
+    web.add_argument("--db", default=argparse.SUPPRESS)
+    web.add_argument("--workspace", default=argparse.SUPPRESS)
 
-    sub.add_parser("gradio", help="Run optional Gradio chat surface")
+    gradio = sub.add_parser("gradio", help="Run optional Gradio chat surface")
+    gradio.add_argument("--db", default=argparse.SUPPRESS)
+    gradio.add_argument("--workspace", default=argparse.SUPPRESS)
 
     args = parser.parse_args()
     if args.command == "ask":
@@ -57,12 +63,8 @@ def main() -> None:
         asyncio.run(kernel.init())
         launch_gradio(kernel)
     else:
-        uvicorn.run(
-            "omnibot.main:create_app",
-            factory=True,
-            host=getattr(args, "host", "127.0.0.1"),
-            port=getattr(args, "port", 8000),
-        )
+        app = asyncio.run(build_app(db_path=args.db, workspace=args.workspace))
+        uvicorn.run(app, host=getattr(args, "host", "127.0.0.1"), port=getattr(args, "port", 8000))
 
 
 if __name__ == "__main__":
