@@ -182,6 +182,70 @@ DASHBOARD_HTML = """
       max-width: 74vw;
     }
     .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .composer {
+      margin-bottom: 18px;
+      border: 1px solid rgba(79,195,247,.28);
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(79,195,247,.08), transparent 30%),
+        linear-gradient(180deg, rgba(23,34,56,.9), rgba(10,15,30,.94));
+      box-shadow: 0 18px 44px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06);
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+    .composer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--gold-soft);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .composer-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: stretch;
+    }
+    textarea {
+      width: 100%;
+      min-height: 74px;
+      resize: vertical;
+      color: var(--ink);
+      background: rgba(0,0,0,.32);
+      border: 1px solid rgba(79,195,247,.26);
+      border-radius: 8px;
+      padding: 11px 12px;
+      font: 14px/1.45 "Segoe UI", system-ui, sans-serif;
+      outline: none;
+      box-shadow: inset 0 1px 10px rgba(0,0,0,.28);
+      transition: border-color .16s ease, box-shadow .16s ease;
+    }
+    textarea:focus {
+      border-color: rgba(79,195,247,.72);
+      box-shadow: 0 0 18px rgba(79,195,247,.14), inset 0 1px 10px rgba(0,0,0,.28);
+    }
+    .run-button {
+      min-width: 150px;
+      color: #0a0f1e;
+      font-weight: 800;
+      background: linear-gradient(180deg, #f2d57a, #d4af37 54%, #9a6d10);
+      border-color: rgba(242,213,122,.78);
+      text-shadow: 0 1px rgba(255,255,255,.35);
+    }
+    .run-button:disabled {
+      cursor: wait;
+      opacity: .72;
+      transform: none;
+    }
+    .composer-status {
+      color: var(--muted);
+      min-height: 18px;
+      font-size: 12px;
+    }
     .chapter {
       display: grid;
       gap: 14px;
@@ -440,6 +504,7 @@ DASHBOARD_HTML = """
       to { opacity: 1; transform: translateY(0) scale(1); }
     }
     @media (max-width: 980px) {
+      .composer-row { grid-template-columns: 1fr; }
       .hero, .arb-grid { grid-template-columns: 1fr; }
       .seal { justify-self: stretch; }
       .stats, .agent-grid, .tool-grid, .memory-grid { grid-template-columns: 1fr; }
@@ -459,6 +524,17 @@ DASHBOARD_HTML = """
         <button onclick="loadTraces()">Refresh</button>
       </div>
     </header>
+    <section class="composer">
+      <div class="composer-head">
+        <span><span class="sigil">RQ</span> Request Console</span>
+        <span class="small">Run OmniBot and open the trace here.</span>
+      </div>
+      <div class="composer-row">
+        <textarea id="requestInput">Look at the file examples/broken_test/test.py and tell me why the tests are failing, then propose a fix.</textarea>
+        <button class="run-button" id="runButton" onclick="submitRequest()">Run Trace</button>
+      </div>
+      <div class="composer-status" id="composerStatus"></div>
+    </section>
     <main id="app"><div class="empty">Loading traces...</div></main>
   </div>
   <script>
@@ -615,6 +691,37 @@ DASHBOARD_HTML = """
       const select = document.getElementById('traceSelect');
       select.innerHTML = traces.map(t => `<option value="${esc(t.task_id)}">${esc(firstLine(t.request || t.task_id, 54))}</option>`).join('');
       app.innerHTML = traces.length ? renderTrace(traces[0]) : '<div class="empty">No task traces yet. POST to /chat or run the README demo.</div>';
+    }
+    async function submitRequest() {
+      const input = document.getElementById('requestInput');
+      const button = document.getElementById('runButton');
+      const status = document.getElementById('composerStatus');
+      const message = input.value.trim();
+      if (!message) {
+        status.textContent = 'Enter a request first.';
+        return;
+      }
+      button.disabled = true;
+      button.textContent = 'Working...';
+      status.textContent = 'Agents are running. The arbiter will choose a trace when they finish.';
+      try {
+        const res = await fetch('/chat', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({message})
+        });
+        if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+        const result = await res.json();
+        status.textContent = `Trace complete: ${result.task_id}`;
+        await loadTraces();
+        selectTrace(result.task_id);
+        document.getElementById('traceSelect').value = result.task_id;
+      } catch (err) {
+        status.textContent = err.message || String(err);
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Run Trace';
+      }
     }
     loadTraces();
   </script>

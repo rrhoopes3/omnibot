@@ -1,6 +1,6 @@
-# OmniBot v0.1.5 "Lightweight Install"
+# OmniBot v0.1.6 "Native Dashboard Composer"
 
-OmniBot v0.1.5 proves one narrow thesis:
+OmniBot v0.1.6 proves one narrow thesis:
 
 > Parallel agents + explicit arbitration + memory + provenance = one coherent collaborator, not a swarm.
 
@@ -59,6 +59,14 @@ LMSTUDIO_BASE_URL=http://localhost:1234/v1
 ```
 
 You can also leave `OMNIBOT_PROVIDER=xai`; OmniBot will try xAI first, then LM Studio, then Ollama, then deterministic fallback.
+
+Browser demo:
+
+```bash
+python main.py web --port 8000 --workspace .
+```
+
+Then open `http://127.0.0.1:8000/dashboard`, use the Request Console, and the trace will load on the same page.
 
 CLI demo:
 
@@ -145,6 +153,12 @@ flowchart TD
 - `sentence-transformers` moved to the optional `embeddings` extra.
 - Gradio moved to the optional `gradio` extra.
 - Python support lowered to `>=3.10` to match the current Windows dev environment.
+
+## v0.1.6 Adds
+
+- Native Request Console on `/dashboard`.
+- Submitting from the dashboard calls `/chat`, waits for the run, refreshes traces, and selects the new task automatically.
+- Gradio is now purely optional; the main browser experience is the custom FastAPI dashboard.
 
 ## What Was Cherry-Picked From Forge
 
