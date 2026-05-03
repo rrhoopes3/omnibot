@@ -1,6 +1,6 @@
-# OmniBot v0.1.2 "Beautiful Trace"
+# OmniBot v0.1.3 "xAI Default"
 
-OmniBot v0.1.2 proves one narrow thesis:
+OmniBot v0.1.3 proves one narrow thesis:
 
 > Parallel agents + explicit arbitration + memory + provenance = one coherent collaborator, not a swarm.
 
@@ -14,14 +14,28 @@ python -m venv .venv
 pip install -e .[dev]
 ```
 
-Optional local model:
+Primary model setup:
+
+```bash
+copy .env.example .env
+```
+
+Then edit `.env` and set:
+
+```bash
+XAI_API_KEY=your_xai_key_here
+OMNIBOT_PROVIDER=xai
+OMNIBOT_MODEL=grok-4.3
+```
+
+Optional local fallback:
 
 ```bash
 ollama pull llama3.2
 ollama serve
 ```
 
-The prototype runs without Ollama by using deterministic fallback logic.
+The prototype defaults to xAI `grok-4.3`. If `XAI_API_KEY` is missing or the API call fails, it tries Ollama, then deterministic fallback logic.
 
 CLI demo:
 
@@ -87,6 +101,13 @@ flowchart TD
 - Arbiter decision is elevated with a high-score golden glow and a "Why this answer?" toggle.
 - Agent execution, tool calls, patch artifacts, causal chain, and memory writes now each have dedicated, glanceable sections.
 - Chat presence output keeps the same facts while aligning the wording with the trace/dashboard language.
+
+## v0.1.3 Adds
+
+- xAI is now the primary model provider path.
+- Default model is `grok-4.3`.
+- `.env` loading is supported via `python-dotenv`.
+- `.env.example` documents xAI, Ollama fallback, and optional search provider keys.
 
 ## What Was Cherry-Picked From Forge
 
