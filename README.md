@@ -1,6 +1,6 @@
-# OmniBot v0.1.6 "Native Dashboard Composer"
+# OmniBot v0.1.7 "Trace Polish"
 
-OmniBot v0.1.6 proves one narrow thesis:
+OmniBot v0.1.7 proves one narrow thesis:
 
 > Parallel agents + explicit arbitration + memory + provenance = one coherent collaborator, not a swarm.
 
@@ -159,6 +159,13 @@ flowchart TD
 - Native Request Console on `/dashboard`.
 - Submitting from the dashboard calls `/chat`, waits for the run, refreshes traces, and selects the new task automatically.
 - Gradio is now purely optional; the main browser experience is the custom FastAPI dashboard.
+
+## v0.1.7 Adds
+
+- More spacious Beautiful Trace layout with stronger hierarchy.
+- Agent and tool cards now show curated summaries first, with raw output behind expansion.
+- Causal chain is now a six-stage spell path: Invocation, Agents, Tools, Judgment, Memory, Response.
+- Full audit hash/parent event ledger remains available under the causal chain.
 
 ## What Was Cherry-Picked From Forge
 

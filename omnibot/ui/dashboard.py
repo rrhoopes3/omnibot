@@ -143,16 +143,16 @@ DASHBOARD_HTML = """
       box-shadow: 0 0 18px rgba(212,175,55,.18), inset 0 1px 0 rgba(255,255,255,.09);
     }
     .shell {
-      width: min(1360px, calc(100vw - 32px));
+      width: min(1280px, calc(100vw - 40px));
       margin: 0 auto;
-      padding: 18px 0 44px;
+      padding: 24px 0 56px;
     }
     .topbar {
       position: sticky;
       top: 0;
       z-index: 5;
-      margin: 0 -16px 18px;
-      padding: 14px 16px;
+      margin: 0 -20px 24px;
+      padding: 15px 20px;
       border-bottom: 1px solid rgba(212,175,55,.18);
       background: linear-gradient(180deg, rgba(10,15,30,.96), rgba(10,15,30,.78));
       backdrop-filter: blur(12px);
@@ -183,26 +183,31 @@ DASHBOARD_HTML = """
     }
     .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
     .composer {
-      margin-bottom: 18px;
+      margin-bottom: 24px;
       border: 1px solid rgba(79,195,247,.28);
       border-radius: 8px;
       background:
         linear-gradient(135deg, rgba(79,195,247,.08), transparent 30%),
+        radial-gradient(ellipse at right, rgba(212,175,55,.09), transparent 42%),
         linear-gradient(180deg, rgba(23,34,56,.9), rgba(10,15,30,.94));
       box-shadow: 0 18px 44px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06);
-      padding: 14px;
+      padding: 18px 20px;
       display: grid;
-      gap: 10px;
+      grid-template-columns: 230px minmax(0, 1fr);
+      gap: 18px;
+      align-items: center;
     }
     .composer-head {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
       gap: 12px;
       color: var(--gold-soft);
       font-family: Georgia, "Times New Roman", serif;
       font-size: 18px;
       font-weight: 700;
+      text-align: center;
     }
     .composer-row {
       display: grid;
@@ -245,11 +250,12 @@ DASHBOARD_HTML = """
       color: var(--muted);
       min-height: 18px;
       font-size: 12px;
+      grid-column: 2;
     }
     .chapter {
       display: grid;
-      gap: 14px;
-      margin-bottom: 18px;
+      gap: 22px;
+      margin-bottom: 24px;
     }
     .hero {
       border: 1px solid rgba(212,175,55,.32);
@@ -258,7 +264,7 @@ DASHBOARD_HTML = """
         linear-gradient(135deg, rgba(212,175,55,.08), transparent 28%),
         linear-gradient(180deg, rgba(23,34,56,.95), rgba(10,15,30,.96));
       box-shadow: 0 26px 60px var(--shadow), inset 0 1px 0 rgba(255,255,255,.07);
-      padding: 18px;
+      padding: 22px;
       display: grid;
       grid-template-columns: 1.1fr .9fr;
       gap: 16px;
@@ -266,7 +272,7 @@ DASHBOARD_HTML = """
     .task-title {
       font-size: clamp(18px, 2vw, 26px);
       font-weight: 800;
-      margin: 0 0 8px;
+      margin: 0 0 14px;
       color: #ffffff;
       text-shadow: 0 0 16px rgba(79,195,247,.18);
     }
@@ -303,7 +309,7 @@ DASHBOARD_HTML = """
         linear-gradient(180deg, rgba(23,34,56,.92), rgba(12,18,34,.94));
       background-size: 100% 22px, auto;
       box-shadow: 0 18px 44px rgba(0,0,0,.36), inset 0 1px 0 rgba(255,255,255,.05);
-      padding: 14px;
+      padding: 18px;
       min-width: 0;
     }
     .panel:hover {
@@ -321,6 +327,8 @@ DASHBOARD_HTML = """
       font-size: 18px;
       font-weight: 700;
       text-shadow: 0 1px 0 #000;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(212,175,55,.14);
     }
     .sigil {
       width: 24px;
@@ -337,10 +345,10 @@ DASHBOARD_HTML = """
     .stats {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 12px;
+      gap: 14px;
     }
     .stat {
-      padding: 11px;
+      padding: 14px;
       border: 1px solid rgba(79,195,247,.18);
       border-radius: 8px;
       background: rgba(7,10,20,.42);
@@ -376,8 +384,8 @@ DASHBOARD_HTML = """
     }
     .arb-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 280px;
-      gap: 14px;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 18px;
       align-items: start;
     }
     .callout {
@@ -391,12 +399,13 @@ DASHBOARD_HTML = """
     .agent-grid, .tool-grid, .memory-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
+      gap: 16px;
     }
     details {
       border: 1px solid rgba(79,195,247,.2);
       border-radius: 8px;
-      background: rgba(7,10,20,.38);
+      background:
+        linear-gradient(180deg, rgba(23,34,56,.62), rgba(7,10,20,.48));
       overflow: hidden;
       transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
     }
@@ -409,9 +418,9 @@ DASHBOARD_HTML = """
     summary {
       cursor: pointer;
       list-style: none;
-      padding: 12px;
+      padding: 14px;
       display: grid;
-      gap: 5px;
+      gap: 8px;
     }
     summary::-webkit-details-marker { display: none; }
     .quest-name {
@@ -422,7 +431,7 @@ DASHBOARD_HTML = """
       color: #f7fbff;
     }
     .small { color: var(--muted); font-size: 12px; }
-    .body { padding: 0 12px 12px; }
+    .body { padding: 0 14px 14px; }
     pre {
       white-space: pre-wrap;
       word-break: break-word;
@@ -450,38 +459,79 @@ DASHBOARD_HTML = """
       color: #f9f1d0;
     }
     .chain {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
       align-items: stretch;
-      gap: 10px;
-      overflow-x: auto;
-      padding-bottom: 4px;
+      gap: 0;
+      padding: 14px 8px 8px;
     }
     .rune {
       position: relative;
-      min-width: 126px;
-      border: 1px solid rgba(79,195,247,.26);
-      border-radius: 8px;
-      padding: 10px;
-      background: linear-gradient(180deg, rgba(23,34,56,.8), rgba(7,10,20,.8));
+      min-height: 132px;
+      margin: 0 8px;
+      border: 1px solid rgba(79,195,247,.32);
+      border-radius: 10px;
+      padding: 13px 12px;
+      background:
+        radial-gradient(circle at top, rgba(79,195,247,.14), transparent 42%),
+        linear-gradient(180deg, rgba(23,34,56,.86), rgba(7,10,20,.86));
       transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      text-align: center;
     }
     .rune:hover {
-      transform: translateY(-2px) scale(1.02);
+      transform: translateY(-4px) scale(1.025);
       border-color: rgba(79,195,247,.68);
       box-shadow: 0 0 20px rgba(79,195,247,.18);
     }
     .rune:not(:last-child)::after {
       content: "";
       position: absolute;
-      right: -11px;
+      right: -17px;
       top: 50%;
-      width: 11px;
+      width: 18px;
       height: 1px;
       background: linear-gradient(90deg, var(--ice), transparent);
       box-shadow: 0 0 10px var(--ice);
+      z-index: 2;
     }
-    .rune-type { color: var(--ice); font-weight: 800; font-size: 12px; }
-    .rune-id { color: var(--dim); font-size: 11px; margin-top: 4px; }
+    .rune-glyph {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 9px;
+      border: 1px solid rgba(212,175,55,.42);
+      border-radius: 50%;
+      color: var(--gold-soft);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 22px;
+      font-weight: 900;
+      text-shadow: 0 0 16px rgba(212,175,55,.42);
+      box-shadow: inset 0 0 18px rgba(212,175,55,.07), 0 0 18px rgba(79,195,247,.1);
+    }
+    .rune-type { color: var(--ice); font-weight: 800; font-size: 13px; }
+    .rune-id { color: var(--dim); font-size: 11px; margin-top: 5px; }
+    .audit-ledger { margin-top: 14px; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .summary-stat {
+      border: 1px solid rgba(212,175,55,.18);
+      border-radius: 7px;
+      padding: 9px;
+      background: rgba(0,0,0,.18);
+    }
+    .summary-stat strong {
+      display: block;
+      color: #fff;
+      font-size: 18px;
+    }
     .journal {
       border-color: rgba(216,193,144,.3);
       background:
@@ -504,10 +554,15 @@ DASHBOARD_HTML = """
       to { opacity: 1; transform: translateY(0) scale(1); }
     }
     @media (max-width: 980px) {
+      .composer { grid-template-columns: 1fr; }
       .composer-row { grid-template-columns: 1fr; }
+      .composer-status { grid-column: 1; }
       .hero, .arb-grid { grid-template-columns: 1fr; }
       .seal { justify-self: stretch; }
       .stats, .agent-grid, .tool-grid, .memory-grid { grid-template-columns: 1fr; }
+      .chain { grid-template-columns: 1fr; gap: 12px; }
+      .rune:not(:last-child)::after { display: none; }
+      .summary-grid { grid-template-columns: 1fr; }
       .topbar { align-items: flex-start; flex-direction: column; }
     }
   </style>
@@ -516,7 +571,7 @@ DASHBOARD_HTML = """
   <div class="shell">
     <header class="topbar">
       <div class="brand">
-        <h1>OmniBot • Visible Arbiter</h1>
+        <h1>OmniBot &bull; Visible Arbiter</h1>
         <div class="subtitle" id="currentTitle">Awaiting latest trace...</div>
       </div>
       <div class="controls">
@@ -579,6 +634,10 @@ DASHBOARD_HTML = """
       if (!rejected.length) return '<div class="rejected">No rejected alternatives.</div>';
       return `<div class="rejected">${rejected.map(r => `<span class="pill">${esc(r.agent)}</span> ${esc(r.reason || '')}`).join('<br>')}</div>`;
     }
+    function evidencePreview(items) {
+      const joined = (items || []).join(' ');
+      return firstLine(joined, 150) || 'No evidence preview recorded.';
+    }
     function agentCard(a) {
       const evidence = (a.evidence || []).join('\\n\\n---\\n\\n');
       const artifacts = (a.artifacts || []).map(x => `${x.type}: ${x.path}\\n${x.content || ''}`).join('\\n\\n');
@@ -586,7 +645,12 @@ DASHBOARD_HTML = """
         <summary>
           <div class="quest-name"><span><span class="sigil">${esc((a.agent_name || '?').slice(0,2).toUpperCase())}</span> ${esc(a.agent_name || 'agent')}</span><span class="pill">${Number(a.confidence || 0).toFixed(2)}</span></div>
           <div class="small">${esc(a.summary || '')}</div>
-          <div class="small">tools: ${(a.tool_calls || []).map(esc).join(', ') || 'none'}</div>
+          <div class="summary-grid">
+            <div class="summary-stat"><strong>${(a.evidence || []).length}</strong><span class="small">evidence</span></div>
+            <div class="summary-stat"><strong>${(a.sources || []).length}</strong><span class="small">sources</span></div>
+            <div class="summary-stat"><strong>${(a.tool_calls || []).length}</strong><span class="small">tools</span></div>
+          </div>
+          <div class="small">${esc(evidencePreview(a.evidence))}</div>
         </summary>
         <div class="body">
           <pre>${esc(evidence || 'No raw evidence recorded.')}</pre>
@@ -595,9 +659,15 @@ DASHBOARD_HTML = """
       </details>`;
     }
     function toolCard(t) {
+      const result = t.result || {};
+      const status = result.status || 'done';
+      const summary = result.error || result.summary || result.stdout || result.stderr || JSON.stringify(result);
       return `<details>
-        <summary><div class="quest-name"><span><span class="sigil">TL</span> ${esc(t.tool_name || 'tool')}</span><span class="pill">${esc((t.result || {}).status || 'done')}</span></div></summary>
-        <div class="body"><pre>${esc(JSON.stringify(t.result || {}, null, 2))}</pre></div>
+        <summary>
+          <div class="quest-name"><span><span class="sigil">TL</span> ${esc(t.tool_name || 'tool')}</span><span class="pill">${esc(status)}</span></div>
+          <div class="small">${esc(firstLine(summary, 150))}</div>
+        </summary>
+        <div class="body"><pre>${esc(JSON.stringify(result, null, 2))}</pre></div>
       </details>`;
     }
     function artifactCard(a) {
@@ -613,11 +683,26 @@ DASHBOARD_HTML = """
       </details>`;
     }
     function chainNode(e) {
-      const label = e.type.replace('.', ' ');
+      const label = e.label || e.type.replace('.', ' ');
       return `<div class="rune" title="parents: ${(e.parents || []).join(', ') || 'none'}\\n${e.audit_hash || ''}">
+        <div class="rune-glyph">${esc(e.glyph || 'X')}</div>
         <div class="rune-type">${esc(label)}</div>
-        <div class="rune-id">${esc(short(e.event_id, 14))}</div>
+        <div class="rune-id">${esc(e.detail || short(e.event_id, 14))}</div>
       </div>`;
+    }
+    function phaseChain(trace) {
+      const agents = trace.agents || [];
+      const tools = trace.tools || [];
+      const memories = trace.memory_writes || [];
+      const chain = trace.causal_chain || [];
+      return [
+        {glyph:'I', label:'Invocation', detail:'user request', parents:[], audit_hash:(chain[0] || {}).audit_hash},
+        {glyph:'A', label:'Agents', detail:`${agents.length} parallel`, parents:[], audit_hash:''},
+        {glyph:'T', label:'Tools', detail:`${tools.length} calls`, parents:[], audit_hash:''},
+        {glyph:'J', label:'Judgment', detail:`${selectedName(trace.arbiter || {})}`, parents:[], audit_hash:''},
+        {glyph:'M', label:'Memory', detail:`${memories.length} writes`, parents:[], audit_hash:''},
+        {glyph:'R', label:'Response', detail: trace.status || 'done', parents:[], audit_hash:(chain[chain.length - 1] || {}).audit_hash},
+      ];
     }
     function renderTrace(trace) {
       const arb = trace.arbiter || {};
@@ -628,7 +713,8 @@ DASHBOARD_HTML = """
       const tools = (trace.tools || []).map(toolCard).join('') || '<div class="empty">No tool calls recorded.</div>';
       const artifacts = (trace.artifacts || []).map(artifactCard).join('') || '<div class="empty">No patch artifacts for this trace.</div>';
       const memories = (trace.memory_writes || []).map(memoryCard).join('') || '<div class="empty">No memory writes recorded.</div>';
-      const chain = (trace.causal_chain || []).map(chainNode).join('');
+      const chain = phaseChain(trace).map(chainNode).join('');
+      const audit = (trace.causal_chain || []).map(e => `${e.type} ${e.event_id}\\n  parents: ${(e.parents || []).join(', ') || '(none)'}\\n  ${e.audit_hash}`).join('\\n\\n');
       return `<div class="chapter fade-in">
         <section class="hero">
           <div>
@@ -672,6 +758,10 @@ DASHBOARD_HTML = """
         <section class="panel">
           <h2 class="panel-title"><span class="sigil">CC</span><span>Causal Chain</span></h2>
           <div class="chain">${chain || '<div class="empty">No causal chain recorded.</div>'}</div>
+          <details class="audit-ledger">
+            <summary><div class="quest-name"><span>Audit ledger</span><span class="pill">${(trace.causal_chain || []).length} events</span></div><div class="small">Full causal parent and audit hash record.</div></summary>
+            <div class="body"><pre>${esc(audit)}</pre></div>
+          </details>
         </section>
         <section class="panel journal">
           <h2 class="panel-title"><span class="sigil">MI</span><span>Memory Impact</span></h2>

@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omnibot"
-version = "0.1.6"
-description = "OmniBot v0.1.6 native dashboard composer"
+version = "0.1.7"
+description = "OmniBot v0.1.7 trace polish"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
