@@ -24,7 +24,7 @@ async def run_cli(args: argparse.Namespace) -> None:
 async def build_app(db_path: str, workspace: str) -> FastAPI:
     kernel = CoordinationKernel(db_path=db_path, workspace=workspace)
     await kernel.init()
-    app = FastAPI(title="OmniBot v0.1 Hello Coherence")
+    app = FastAPI(title="OmniBot v0.1.2 Beautiful Trace")
     app.include_router(chat_router(kernel))
     app.include_router(dashboard_router(kernel))
     return app
@@ -35,7 +35,7 @@ def create_app(db_path: str = "omnibot.db", workspace: str = ".") -> FastAPI:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="OmniBot v0.1.1 Visible Arbiter")
+    parser = argparse.ArgumentParser(description="OmniBot v0.1.2 Beautiful Trace")
     parser.add_argument("--db", default="omnibot.db")
     parser.add_argument("--workspace", default=str(Path.cwd()))
     sub = parser.add_subparsers(dest="command")

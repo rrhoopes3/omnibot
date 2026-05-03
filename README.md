@@ -1,10 +1,10 @@
-# OmniBot v0.1.1 "Visible Arbiter"
+# OmniBot v0.1.2 "Beautiful Trace"
 
-OmniBot v0.1.1 proves one narrow thesis:
+OmniBot v0.1.2 proves one narrow thesis:
 
 > Parallel agents + explicit arbitration + memory + provenance = one coherent collaborator, not a swarm.
 
-This is not a full framework. It is a small coordination substrate with an append-only event log, three starter agents, a visible arbiter, minimal memory, scoped tools, patch artifacts, and a dashboard that makes the coherence loop inspectable.
+This is not a full framework. It is a small coordination substrate with an append-only event log, three starter agents, a visible arbiter, minimal memory, scoped tools, patch artifacts, and a dashboard that makes the coherence loop feel inspectable and deliberate.
 
 ## Run
 
@@ -78,6 +78,15 @@ flowchart TD
 - CLI flags can appear after the subcommand: `python main.py ask "..." --workspace .`.
 - Golden tests for causal parent visibility and audit hash validation.
 - `examples/broken_test/test.py` so the README demo works in a fresh clone.
+
+## v0.1.2 Adds
+
+- Redesigned `/dashboard` as **Beautiful Trace**, a dark atmospheric coordination log.
+- Latest trace loads first, with recent trace selection.
+- Coherence score is shown as a prominent stat sheet with color-coded bars.
+- Arbiter decision is elevated with a high-score golden glow and a "Why this answer?" toggle.
+- Agent execution, tool calls, patch artifacts, causal chain, and memory writes now each have dedicated, glanceable sections.
+- Chat presence output keeps the same facts while aligning the wording with the trace/dashboard language.
 
 ## What Was Cherry-Picked From Forge
 

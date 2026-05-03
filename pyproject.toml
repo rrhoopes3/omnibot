@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omnibot"
-version = "0.1.1"
-description = "OmniBot v0.1.1 Visible Arbiter"
+version = "0.1.2"
+description = "OmniBot v0.1.2 Beautiful Trace"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

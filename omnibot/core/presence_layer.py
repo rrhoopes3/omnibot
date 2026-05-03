@@ -17,7 +17,7 @@ class PresenceLayer:
             f"- Used tools: {', '.join(tools) if tools else 'none'}.\n"
             f"- Sources: {', '.join(sources[:8]) if sources else 'none'}.\n"
             f"- Arbiter confidence: {decision.confidence:.2f}.\n\n"
-            "Coherence score:\n"
+            "Coherence scorecard:\n"
             f"- Overall: {score.overall:.2f}\n"
             f"- Evidence coverage: {score.evidence_coverage:.2f}\n"
             f"- Agent agreement: {score.agent_agreement:.2f}\n"

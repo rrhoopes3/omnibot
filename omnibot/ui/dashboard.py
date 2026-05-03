@@ -59,6 +59,7 @@ def _build_trace(task_id: str, events: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "task_id": task_id,
         "request": task_events[-1]["payload"].get("user_request", "") if task_events else "",
+        "timestamp": task_events[-1]["timestamp"] if task_events else "",
         "status": statuses[-1] if statuses else "unknown",
         "agents": agents,
         "tools": tools,
@@ -83,161 +84,537 @@ DASHBOARD_HTML = """
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OmniBot Visible Arbiter</title>
+  <title>OmniBot Beautiful Trace</title>
   <style>
     :root {
-      color-scheme: light;
-      --ink: #17202a;
-      --muted: #5c6975;
-      --line: #d9e0e7;
-      --panel: #ffffff;
-      --band: #f5f7fa;
-      --accent: #0f766e;
-      --accent-soft: #d9f3ef;
-      --warn: #a15c00;
+      color-scheme: dark;
+      --void: #0a0f1e;
+      --abyss: #10182b;
+      --stone: #172238;
+      --stone-2: #1d2a42;
+      --line: rgba(212, 175, 55, 0.28);
+      --line-ice: rgba(79, 195, 247, 0.26);
+      --gold: #d4af37;
+      --gold-soft: #f2d57a;
+      --ice: #4fc3f7;
+      --blood: #c62828;
+      --green: #4caf50;
+      --ink: #edf6ff;
+      --muted: #a8b5c7;
+      --dim: #6f7f95;
+      --parchment: #d8c190;
+      --shadow: rgba(0, 0, 0, 0.55);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font: 14px/1.45 system-ui, -apple-system, Segoe UI, sans-serif;
+      min-height: 100vh;
+      font: 14px/1.45 "Segoe UI", "Trebuchet MS", system-ui, sans-serif;
       color: var(--ink);
-      background: var(--band);
+      background:
+        linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.014) 1px, transparent 1px),
+        linear-gradient(180deg, #0a0f1e 0%, #0d1426 48%, #080b13 100%);
+      background-size: 30px 30px, 30px 30px, auto;
     }
-    header {
-      padding: 18px 24px;
-      border-bottom: 1px solid var(--line);
-      background: var(--panel);
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at top, rgba(79, 195, 247, 0.13), transparent 45%),
+        linear-gradient(135deg, rgba(212, 175, 55, 0.06), transparent 22%, rgba(198, 40, 40, 0.05) 72%, transparent);
+      mix-blend-mode: screen;
+    }
+    button, select {
+      color: var(--ink);
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(29,42,66,.96), rgba(13,20,38,.96));
+      border-radius: 6px;
+      padding: 8px 11px;
+      cursor: pointer;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 8px 22px rgba(0,0,0,.22);
+      transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+    }
+    button:hover, select:hover {
+      transform: translateY(-1px) scale(1.01);
+      border-color: rgba(242,213,122,.72);
+      box-shadow: 0 0 18px rgba(212,175,55,.18), inset 0 1px 0 rgba(255,255,255,.09);
+    }
+    .shell {
+      width: min(1360px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 18px 0 44px;
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      margin: 0 -16px 18px;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(212,175,55,.18);
+      background: linear-gradient(180deg, rgba(10,15,30,.96), rgba(10,15,30,.78));
+      backdrop-filter: blur(12px);
       display: flex;
       gap: 16px;
       align-items: center;
       justify-content: space-between;
     }
-    h1 { font-size: 18px; margin: 0; }
-    button {
-      border: 1px solid var(--line);
-      background: var(--panel);
-      border-radius: 6px;
-      padding: 8px 12px;
-      cursor: pointer;
-    }
-    main { padding: 20px 24px 40px; max-width: 1180px; margin: 0 auto; }
-    .trace {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      margin-bottom: 18px;
-      overflow: hidden;
-    }
-    .trace-head {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--line);
+    .brand {
       display: grid;
-      gap: 6px;
-    }
-    .task-id { color: var(--muted); font-size: 12px; }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-      padding: 14px;
-    }
-    section {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 12px;
+      gap: 4px;
       min-width: 0;
     }
-    section.wide { grid-column: 1 / -1; }
-    h2 { font-size: 13px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(22px, 3vw, 34px);
+      font-weight: 700;
+      color: var(--gold-soft);
+      text-shadow: 0 0 18px rgba(212,175,55,.32), 0 2px 0 #000;
+    }
+    .subtitle {
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 74vw;
+    }
+    .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .chapter {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .hero {
+      border: 1px solid rgba(212,175,55,.32);
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(212,175,55,.08), transparent 28%),
+        linear-gradient(180deg, rgba(23,34,56,.95), rgba(10,15,30,.96));
+      box-shadow: 0 26px 60px var(--shadow), inset 0 1px 0 rgba(255,255,255,.07);
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 16px;
+    }
+    .task-title {
+      font-size: clamp(18px, 2vw, 26px);
+      font-weight: 800;
+      margin: 0 0 8px;
+      color: #ffffff;
+      text-shadow: 0 0 16px rgba(79,195,247,.18);
+    }
+    .meta-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .seal {
+      justify-self: end;
+      align-self: center;
+      min-width: 210px;
+      border: 1px solid rgba(212,175,55,.5);
+      border-radius: 8px;
+      padding: 14px;
+      background: linear-gradient(180deg, rgba(18,27,47,.92), rgba(7,10,20,.92));
+      text-align: center;
+      box-shadow: 0 0 28px rgba(212,175,55,.16), inset 0 0 18px rgba(212,175,55,.05);
+    }
+    .overall {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 54px;
+      line-height: .9;
+      color: var(--gold-soft);
+      text-shadow: 0 0 24px rgba(212,175,55,.42);
+    }
+    .panel {
+      border: 1px solid rgba(212,175,55,.24);
+      border-radius: 8px;
+      background:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(23,34,56,.92), rgba(12,18,34,.94));
+      background-size: 100% 22px, auto;
+      box-shadow: 0 18px 44px rgba(0,0,0,.36), inset 0 1px 0 rgba(255,255,255,.05);
+      padding: 14px;
+      min-width: 0;
+    }
+    .panel:hover {
+      border-color: rgba(79,195,247,.44);
+      box-shadow: 0 18px 48px rgba(0,0,0,.42), 0 0 22px rgba(79,195,247,.08);
+    }
+    .panel-title {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px;
+      align-items: center;
+      margin: 0 0 12px;
+      color: var(--gold-soft);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 18px;
+      font-weight: 700;
+      text-shadow: 0 1px 0 #000;
+    }
+    .sigil {
+      width: 24px;
+      height: 24px;
+      border: 1px solid rgba(212,175,55,.54);
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      color: var(--ice);
+      font-size: 11px;
+      font-weight: 900;
+      box-shadow: 0 0 14px rgba(79,195,247,.16), inset 0 0 10px rgba(79,195,247,.08);
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .stat {
+      padding: 11px;
+      border: 1px solid rgba(79,195,247,.18);
+      border-radius: 8px;
+      background: rgba(7,10,20,.42);
+    }
+    .stat-label { color: var(--muted); font-size: 12px; margin-bottom: 7px; }
+    .stat-value { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .bar {
+      height: 9px;
+      flex: 1;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      overflow: hidden;
+      box-shadow: inset 0 1px 5px rgba(0,0,0,.45);
+    }
+    .bar span {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      box-shadow: 0 0 14px currentColor;
+    }
+    .score-num { min-width: 38px; text-align: right; font-weight: 800; }
+    .green { color: var(--green); background: linear-gradient(90deg, #2e7d32, #81c784); }
+    .gold { color: var(--gold); background: linear-gradient(90deg, #9a6d10, #f2d57a); }
+    .red { color: var(--blood); background: linear-gradient(90deg, #8e1b1b, #ef5350); }
+    .arbiter {
+      border-color: rgba(212,175,55,.46);
+      background:
+        linear-gradient(135deg, rgba(212,175,55,.13), transparent 34%),
+        linear-gradient(180deg, rgba(29,42,66,.98), rgba(10,15,30,.98));
+    }
+    .arbiter.high {
+      box-shadow: 0 0 34px rgba(212,175,55,.22), 0 24px 58px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.08);
+    }
+    .arb-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 14px;
+      align-items: start;
+    }
+    .callout {
+      border-left: 3px solid var(--gold);
+      padding: 10px 12px;
+      background: rgba(212,175,55,.07);
+      border-radius: 0 6px 6px 0;
+      color: #fff8dc;
+    }
+    .rejected { color: var(--muted); margin-top: 10px; }
+    .agent-grid, .tool-grid, .memory-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    details {
+      border: 1px solid rgba(79,195,247,.2);
+      border-radius: 8px;
+      background: rgba(7,10,20,.38);
+      overflow: hidden;
+      transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+    }
+    details:hover {
+      transform: translateY(-1px);
+      border-color: rgba(79,195,247,.5);
+      box-shadow: 0 0 18px rgba(79,195,247,.11);
+    }
+    details[open] { border-color: rgba(212,175,55,.44); }
+    summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 12px;
+      display: grid;
+      gap: 5px;
+    }
+    summary::-webkit-details-marker { display: none; }
+    .quest-name {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-weight: 800;
+      color: #f7fbff;
+    }
+    .small { color: var(--muted); font-size: 12px; }
+    .body { padding: 0 12px 12px; }
     pre {
       white-space: pre-wrap;
       word-break: break-word;
       margin: 0;
-      background: #f8fafc;
-      border: 1px solid #edf1f5;
+      color: #eaf7ff;
+      background: rgba(0,0,0,.3);
+      border: 1px solid rgba(79,195,247,.16);
       border-radius: 6px;
-      padding: 8px;
-      max-height: 260px;
+      padding: 10px;
+      max-height: 300px;
       overflow: auto;
+      font: 12px/1.45 Consolas, "Cascadia Mono", monospace;
     }
     .pill {
       display: inline-block;
-      padding: 2px 7px;
+      padding: 3px 8px;
       border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent);
+      border: 1px solid rgba(212,175,55,.28);
+      background: rgba(212,175,55,.09);
+      color: var(--gold-soft);
       font-size: 12px;
-      margin-right: 5px;
     }
-    .metric {
-      display: grid;
-      grid-template-columns: 150px 1fr 42px;
-      gap: 8px;
-      align-items: center;
-      margin: 6px 0;
+    .diff {
+      border-color: rgba(212,175,55,.35);
+      color: #f9f1d0;
     }
-    .bar { height: 8px; background: #edf1f5; border-radius: 999px; overflow: hidden; }
-    .bar span { display: block; height: 100%; background: var(--accent); }
-    .empty { color: var(--muted); padding: 18px; }
-    @media (max-width: 780px) {
-      .grid { grid-template-columns: 1fr; }
-      section.wide { grid-column: auto; }
-      header { align-items: flex-start; flex-direction: column; }
+    .chain {
+      display: flex;
+      align-items: stretch;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .rune {
+      position: relative;
+      min-width: 126px;
+      border: 1px solid rgba(79,195,247,.26);
+      border-radius: 8px;
+      padding: 10px;
+      background: linear-gradient(180deg, rgba(23,34,56,.8), rgba(7,10,20,.8));
+      transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    }
+    .rune:hover {
+      transform: translateY(-2px) scale(1.02);
+      border-color: rgba(79,195,247,.68);
+      box-shadow: 0 0 20px rgba(79,195,247,.18);
+    }
+    .rune:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      right: -11px;
+      top: 50%;
+      width: 11px;
+      height: 1px;
+      background: linear-gradient(90deg, var(--ice), transparent);
+      box-shadow: 0 0 10px var(--ice);
+    }
+    .rune-type { color: var(--ice); font-weight: 800; font-size: 12px; }
+    .rune-id { color: var(--dim); font-size: 11px; margin-top: 4px; }
+    .journal {
+      border-color: rgba(216,193,144,.3);
+      background:
+        linear-gradient(180deg, rgba(49,39,24,.36), rgba(12,18,34,.88)),
+        repeating-linear-gradient(0deg, rgba(216,193,144,.035), rgba(216,193,144,.035) 1px, transparent 1px, transparent 24px);
+    }
+    .empty {
+      color: var(--muted);
+      padding: 22px;
+      border: 1px dashed rgba(212,175,55,.25);
+      border-radius: 8px;
+      background: rgba(0,0,0,.18);
+    }
+    .fade-in {
+      animation: rise .34s ease both;
+      transform-origin: center top;
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px) scale(.995); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @media (max-width: 980px) {
+      .hero, .arb-grid { grid-template-columns: 1fr; }
+      .seal { justify-self: stretch; }
+      .stats, .agent-grid, .tool-grid, .memory-grid { grid-template-columns: 1fr; }
+      .topbar { align-items: flex-start; flex-direction: column; }
     }
   </style>
 </head>
 <body>
-  <header>
-    <div>
-      <h1>OmniBot v0.1.1 Visible Arbiter</h1>
-      <div class="task-id">One page for what happened, why it happened, and what evidence carried the decision.</div>
-    </div>
-    <button onclick="loadTraces()">Refresh</button>
-  </header>
-  <main id="app"><div class="empty">Loading traces...</div></main>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <h1>OmniBot • Visible Arbiter</h1>
+        <div class="subtitle" id="currentTitle">Awaiting latest trace...</div>
+      </div>
+      <div class="controls">
+        <select id="traceSelect" onchange="selectTrace(this.value)" aria-label="Recent traces"></select>
+        <button onclick="loadTraces()">Refresh</button>
+      </div>
+    </header>
+    <main id="app"><div class="empty">Loading traces...</div></main>
+  </div>
   <script>
+    let traces = [];
     function esc(value) {
       return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
     }
-    function metric(label, value) {
+    function short(value, n = 12) {
+      const s = String(value || '');
+      return s.length > n ? s.slice(0, n) : s;
+    }
+    function pct(value) {
       const n = Number(value || 0);
-      return `<div class="metric"><div>${esc(label)}</div><div class="bar"><span style="width:${Math.max(0, Math.min(1, n)) * 100}%"></span></div><div>${n.toFixed(2)}</div></div>`;
+      return Math.max(0, Math.min(1, n));
+    }
+    function tier(value, inverted = false) {
+      const n = inverted ? 1 - pct(value) : pct(value);
+      if (n >= .75) return 'green';
+      if (n >= .45) return 'gold';
+      return 'red';
+    }
+    function metric(label, value, inverted = false) {
+      const n = pct(value);
+      return `<div class="stat">
+        <div class="stat-label">${esc(label)}</div>
+        <div class="stat-value"><div class="bar"><span class="${tier(value, inverted)}" style="width:${n * 100}%"></span></div><div class="score-num">${n.toFixed(2)}</div></div>
+      </div>`;
+    }
+    function formatTime(ts) {
+      if (!ts) return 'timestamp unavailable';
+      try { return new Date(ts).toLocaleString(); } catch { return ts; }
+    }
+    function firstLine(value, limit = 92) {
+      const s = String(value || '').replace(/\\s+/g, ' ').trim();
+      return s.length > limit ? s.slice(0, limit - 3) + '...' : s;
+    }
+    function selectedName(arb) {
+      return (arb.selected_agents || [])[0] || 'none';
+    }
+    function rejectedHtml(arb) {
+      const rejected = arb.rejected_alternatives || [];
+      if (!rejected.length) return '<div class="rejected">No rejected alternatives.</div>';
+      return `<div class="rejected">${rejected.map(r => `<span class="pill">${esc(r.agent)}</span> ${esc(r.reason || '')}`).join('<br>')}</div>`;
+    }
+    function agentCard(a) {
+      const evidence = (a.evidence || []).join('\\n\\n---\\n\\n');
+      const artifacts = (a.artifacts || []).map(x => `${x.type}: ${x.path}\\n${x.content || ''}`).join('\\n\\n');
+      return `<details>
+        <summary>
+          <div class="quest-name"><span><span class="sigil">${esc((a.agent_name || '?').slice(0,2).toUpperCase())}</span> ${esc(a.agent_name || 'agent')}</span><span class="pill">${Number(a.confidence || 0).toFixed(2)}</span></div>
+          <div class="small">${esc(a.summary || '')}</div>
+          <div class="small">tools: ${(a.tool_calls || []).map(esc).join(', ') || 'none'}</div>
+        </summary>
+        <div class="body">
+          <pre>${esc(evidence || 'No raw evidence recorded.')}</pre>
+          ${artifacts ? `<p class="small">Artifacts</p><pre class="diff">${esc(artifacts)}</pre>` : ''}
+        </div>
+      </details>`;
+    }
+    function toolCard(t) {
+      return `<details>
+        <summary><div class="quest-name"><span><span class="sigil">TL</span> ${esc(t.tool_name || 'tool')}</span><span class="pill">${esc((t.result || {}).status || 'done')}</span></div></summary>
+        <div class="body"><pre>${esc(JSON.stringify(t.result || {}, null, 2))}</pre></div>
+      </details>`;
+    }
+    function artifactCard(a) {
+      return `<details open>
+        <summary><div class="quest-name"><span><span class="sigil">DF</span> ${esc(a.path || 'artifact')}</span><span class="pill">${esc(a.artifact_type || 'artifact')}</span></div></summary>
+        <div class="body"><pre class="diff">${esc(a.content || '')}</pre></div>
+      </details>`;
+    }
+    function memoryCard(m) {
+      return `<details class="journal">
+        <summary><div class="quest-name"><span><span class="sigil">ME</span> ${esc(m.kind || 'memory')}</span><span class="pill">${Number(m.confidence || 0).toFixed(2)}</span></div><div class="small">${esc(m.memory_id || '')}</div></summary>
+        <div class="body"><pre>${esc(m.content || JSON.stringify(m, null, 2))}</pre><div class="small">provenance: ${esc(m.source_event_id || '')}</div></div>
+      </details>`;
+    }
+    function chainNode(e) {
+      const label = e.type.replace('.', ' ');
+      return `<div class="rune" title="parents: ${(e.parents || []).join(', ') || 'none'}\\n${e.audit_hash || ''}">
+        <div class="rune-type">${esc(label)}</div>
+        <div class="rune-id">${esc(short(e.event_id, 14))}</div>
+      </div>`;
     }
     function renderTrace(trace) {
       const arb = trace.arbiter || {};
       const score = arb.coherence_score || {};
-      const agentHtml = (trace.agents || []).map(a => `<p><span class="pill">${esc(a.agent_name)}</span>${esc(a.summary)}<br><small>confidence ${esc(a.confidence)} | tools ${(a.tool_calls || []).map(esc).join(', ') || 'none'}</small></p>`).join('') || '<p class="empty">No agents yet.</p>';
-      const toolHtml = (trace.tools || []).map(t => `<p><span class="pill">${esc(t.tool_name)}</span><pre>${esc(JSON.stringify(t.result, null, 2))}</pre></p>`).join('') || '<p class="empty">No tool calls yet.</p>';
-      const artifactHtml = (trace.artifacts || []).map(a => `<p><span class="pill">${esc(a.artifact_type)}</span>${esc(a.path)}<pre>${esc(a.content)}</pre></p>`).join('') || '<p class="empty">No artifacts yet.</p>';
-      const causal = (trace.causal_chain || []).map(e => `${e.type} ${e.event_id}\\n  parents: ${(e.parents || []).join(', ') || '(none)'}\\n  ${e.audit_hash}`).join('\\n\\n');
-      return `<article class="trace">
-        <div class="trace-head">
-          <strong>${esc(trace.request || 'Request unavailable')}</strong>
-          <span class="task-id">${esc(trace.task_id)} | status: ${esc(trace.status)}</span>
-        </div>
-        <div class="grid">
-          <section><h2>Agents</h2>${agentHtml}</section>
-          <section><h2>Coherence Score</h2>
-            ${metric('Overall', score.overall)}
+      document.getElementById('currentTitle').textContent = `${firstLine(trace.request || 'No request')} | ${formatTime(trace.timestamp)}`;
+      const high = Number(score.overall || 0) >= .75 ? ' high' : '';
+      const agents = (trace.agents || []).map(agentCard).join('') || '<div class="empty">No agents have completed.</div>';
+      const tools = (trace.tools || []).map(toolCard).join('') || '<div class="empty">No tool calls recorded.</div>';
+      const artifacts = (trace.artifacts || []).map(artifactCard).join('') || '<div class="empty">No patch artifacts for this trace.</div>';
+      const memories = (trace.memory_writes || []).map(memoryCard).join('') || '<div class="empty">No memory writes recorded.</div>';
+      const chain = (trace.causal_chain || []).map(chainNode).join('');
+      return `<div class="chapter fade-in">
+        <section class="hero">
+          <div>
+            <p class="task-title">${esc(trace.request || 'Request unavailable')}</p>
+            <div class="meta-row"><span class="pill">${esc(trace.status || 'unknown')}</span><span>${esc(trace.task_id)}</span><span>${esc(formatTime(trace.timestamp))}</span></div>
+          </div>
+          <div class="seal"><div class="small">Overall Coherence</div><div class="overall">${Number(score.overall || 0).toFixed(2)}</div><div class="small">${esc((score.notes || [])[0] || 'trace ready')}</div></div>
+        </section>
+        <section class="panel">
+          <h2 class="panel-title"><span class="sigil">CS</span><span>Coherence Score</span></h2>
+          <div class="stats">
             ${metric('Evidence coverage', score.evidence_coverage)}
             ${metric('Agent agreement', score.agent_agreement)}
             ${metric('Tool provenance', score.tool_provenance)}
             ${metric('Confidence spread', score.confidence_spread)}
-            ${metric('Unresolved risk', score.unresolved_risk)}
-          </section>
-          <section class="wide"><h2>Arbiter Decision</h2><pre>${esc(JSON.stringify(arb, null, 2))}</pre></section>
-          <section><h2>Tool Calls</h2>${toolHtml}</section>
-          <section><h2>Patch Artifacts</h2>${artifactHtml}</section>
-          <section><h2>Memory Writes</h2><pre>${esc(JSON.stringify(trace.memory_writes || [], null, 2))}</pre></section>
-          <section><h2>Causal Chain</h2><pre>${esc(causal)}</pre></section>
-        </div>
-      </article>`;
+            ${metric('Unresolved risk', score.unresolved_risk, true)}
+          </div>
+        </section>
+        <section class="panel arbiter${high}">
+          <h2 class="panel-title"><span class="sigil">AR</span><span>Arbiter Decision</span></h2>
+          <div class="arb-grid">
+            <div>
+              <div class="callout">${esc(arb.final_answer || 'No final answer recorded.').split('\\n').slice(0, 8).join('\\n')}</div>
+              <p><span class="pill">chosen: ${esc(selectedName(arb))}</span> <span class="pill">confidence: ${Number(arb.confidence || 0).toFixed(2)}</span></p>
+              ${rejectedHtml(arb)}
+            </div>
+            <details>
+              <summary><div class="quest-name"><span>Why this answer?</span><span class="pill">open</span></div><div class="small">Full arbiter rationale and rejected alternatives.</div></summary>
+              <div class="body"><pre>${esc(arb.rationale || '')}\\n\\n${esc(JSON.stringify(arb.rejected_alternatives || [], null, 2))}</pre></div>
+            </details>
+          </div>
+        </section>
+        <section class="panel">
+          <h2 class="panel-title"><span class="sigil">AG</span><span>Agent Execution Trace</span></h2>
+          <div class="agent-grid">${agents}</div>
+        </section>
+        <section class="panel">
+          <h2 class="panel-title"><span class="sigil">TA</span><span>Tool Calls & Artifacts</span></h2>
+          <div class="tool-grid">${tools}${artifacts}</div>
+        </section>
+        <section class="panel">
+          <h2 class="panel-title"><span class="sigil">CC</span><span>Causal Chain</span></h2>
+          <div class="chain">${chain || '<div class="empty">No causal chain recorded.</div>'}</div>
+        </section>
+        <section class="panel journal">
+          <h2 class="panel-title"><span class="sigil">MI</span><span>Memory Impact</span></h2>
+          <div class="memory-grid">${memories}</div>
+        </section>
+      </div>`;
+    }
+    function selectTrace(taskId) {
+      const trace = traces.find(t => t.task_id === taskId) || traces[0];
+      document.getElementById('app').innerHTML = trace ? renderTrace(trace) : '<div class="empty">No trace selected.</div>';
     }
     async function loadTraces() {
       const app = document.getElementById('app');
       const res = await fetch('/api/traces');
-      const traces = await res.json();
-      app.innerHTML = traces.length ? traces.reverse().map(renderTrace).join('') : '<div class="empty">No task traces yet. POST to /chat or run the CLI demo.</div>';
+      traces = await res.json();
+      traces.sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')));
+      const select = document.getElementById('traceSelect');
+      select.innerHTML = traces.map(t => `<option value="${esc(t.task_id)}">${esc(firstLine(t.request || t.task_id, 54))}</option>`).join('');
+      app.innerHTML = traces.length ? renderTrace(traces[0]) : '<div class="empty">No task traces yet. POST to /chat or run the README demo.</div>';
     }
     loadTraces();
   </script>
