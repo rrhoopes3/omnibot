@@ -1,6 +1,6 @@
-# OmniBot v0.1.7 "Trace Polish"
+# OmniBot v0.1.8 "Visible Tools & Sandbox"
 
-OmniBot v0.1.7 proves one narrow thesis:
+OmniBot v0.1.8 proves one narrow thesis:
 
 > Parallel agents + explicit arbitration + memory + provenance = one coherent collaborator, not a swarm.
 
@@ -166,6 +166,19 @@ flowchart TD
 - Agent and tool cards now show curated summaries first, with raw output behind expansion.
 - Causal chain is now a six-stage spell path: Invocation, Agents, Tools, Judgment, Memory, Response.
 - Full audit hash/parent event ledger remains available under the causal chain.
+
+## v0.1.8 Adds
+
+- `/api/tools` exposes current workspace, enabled tools, risk levels, and sandbox status.
+- `/dashboard` now includes a **Tools & Sandbox** panel.
+- Shell and Python tools can be disabled with:
+
+```env
+OMNIBOT_ENABLE_SHELL=false
+OMNIBOT_ENABLE_PYTHON=false
+```
+
+Current sandbox status is intentionally explicit: filesystem paths are workspace-scoped and shell/Python run with workspace `cwd` plus guardrails, but this is not a hard container or VM sandbox.
 
 ## What Was Cherry-Picked From Forge
 

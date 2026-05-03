@@ -39,6 +39,10 @@ def dashboard_router(kernel: CoordinationKernel) -> APIRouter:
     async def memory(limit: int = 30):
         return [item.model_dump(exclude={"embedding"}) for item in await kernel.memory.recent(limit=limit)]
 
+    @router.get("/api/tools")
+    async def tools():
+        return kernel.tools.manifest()
+
     @router.get("/", response_class=HTMLResponse)
     @router.get("/dashboard", response_class=HTMLResponse)
     async def dashboard():
@@ -61,6 +65,7 @@ def _build_trace(task_id: str, events: list[dict[str, Any]]) -> dict[str, Any]:
         "request": task_events[-1]["payload"].get("user_request", "") if task_events else "",
         "timestamp": task_events[-1]["timestamp"] if task_events else "",
         "status": statuses[-1] if statuses else "unknown",
+        "tool_manifest": None,
         "agents": agents,
         "tools": tools,
         "artifacts": artifacts,
@@ -401,6 +406,37 @@ DASHBOARD_HTML = """
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 16px;
     }
+    .sandbox-grid {
+      display: grid;
+      grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .tool-manifest-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .tool-manifest-card {
+      border: 1px solid rgba(79,195,247,.2);
+      border-radius: 8px;
+      padding: 11px;
+      background: linear-gradient(180deg, rgba(23,34,56,.55), rgba(0,0,0,.18));
+    }
+    .tool-manifest-card.disabled {
+      opacity: .58;
+      filter: grayscale(.35);
+    }
+    .risk-low { color: var(--green); }
+    .risk-medium { color: var(--gold-soft); }
+    .risk-high { color: #ff6b6b; }
+    .sandbox-warning {
+      border-left: 3px solid var(--blood);
+      padding: 10px 12px;
+      border-radius: 0 6px 6px 0;
+      background: rgba(198,40,40,.1);
+      color: #ffd9d9;
+    }
     details {
       border: 1px solid rgba(79,195,247,.2);
       border-radius: 8px;
@@ -559,7 +595,7 @@ DASHBOARD_HTML = """
       .composer-status { grid-column: 1; }
       .hero, .arb-grid { grid-template-columns: 1fr; }
       .seal { justify-self: stretch; }
-      .stats, .agent-grid, .tool-grid, .memory-grid { grid-template-columns: 1fr; }
+      .stats, .agent-grid, .tool-grid, .memory-grid, .sandbox-grid, .tool-manifest-grid { grid-template-columns: 1fr; }
       .chain { grid-template-columns: 1fr; gap: 12px; }
       .rune:not(:last-child)::after { display: none; }
       .summary-grid { grid-template-columns: 1fr; }
@@ -594,6 +630,7 @@ DASHBOARD_HTML = """
   </div>
   <script>
     let traces = [];
+    let toolManifest = null;
     function esc(value) {
       return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
     }
@@ -682,6 +719,28 @@ DASHBOARD_HTML = """
         <div class="body"><pre>${esc(m.content || JSON.stringify(m, null, 2))}</pre><div class="small">provenance: ${esc(m.source_event_id || '')}</div></div>
       </details>`;
     }
+    function renderToolManifest() {
+      if (!toolManifest) return '<div class="empty">Tool manifest unavailable.</div>';
+      const toggles = toolManifest.toggles || {};
+      const sandbox = toolManifest.sandbox || {};
+      const cards = (toolManifest.tools || []).map(t => `<div class="tool-manifest-card ${t.enabled ? '' : 'disabled'}">
+        <div class="quest-name"><span>${esc(t.name)}</span><span class="pill ${'risk-' + esc(t.risk)}">${esc(t.risk)}</span></div>
+        <div class="small">${esc(t.description)}</div>
+        <div class="small">category: ${esc(t.category)}</div>
+        <div class="small">sandbox: ${esc(t.sandbox)}</div>
+        <div class="small">status: ${t.enabled ? 'enabled' : 'disabled'}</div>
+      </div>`).join('');
+      return `<div class="sandbox-grid">
+        <div>
+          <div class="sandbox-warning">This is a workspace-scoped subprocess guardrail, not a container or VM sandbox.</div>
+          <p class="small">Workspace root</p>
+          <pre>${esc(toolManifest.workspace || '')}</pre>
+          <p><span class="pill">shell: ${toggles.OMNIBOT_ENABLE_SHELL ? 'enabled' : 'disabled'}</span> <span class="pill">python: ${toggles.OMNIBOT_ENABLE_PYTHON ? 'enabled' : 'disabled'}</span></p>
+          <p class="small">Hard container: ${sandbox.hard_container ? 'yes' : 'no'} | Dangerous command patterns: ${(sandbox.guardrails || {}).dangerous_command_patterns || 0} | Sensitive path patterns: ${(sandbox.guardrails || {}).sensitive_path_patterns || 0}</p>
+        </div>
+        <div class="tool-manifest-grid">${cards}</div>
+      </div>`;
+    }
     function chainNode(e) {
       const label = e.label || e.type.replace('.', ' ');
       return `<div class="rune" title="parents: ${(e.parents || []).join(', ') || 'none'}\\n${e.audit_hash || ''}">
@@ -756,6 +815,10 @@ DASHBOARD_HTML = """
           <div class="tool-grid">${tools}${artifacts}</div>
         </section>
         <section class="panel">
+          <h2 class="panel-title"><span class="sigil">SB</span><span>Tools & Sandbox</span></h2>
+          ${renderToolManifest()}
+        </section>
+        <section class="panel">
           <h2 class="panel-title"><span class="sigil">CC</span><span>Causal Chain</span></h2>
           <div class="chain">${chain || '<div class="empty">No causal chain recorded.</div>'}</div>
           <details class="audit-ledger">
@@ -775,6 +838,10 @@ DASHBOARD_HTML = """
     }
     async function loadTraces() {
       const app = document.getElementById('app');
+      if (!toolManifest) {
+        const toolRes = await fetch('/api/tools');
+        toolManifest = await toolRes.json();
+      }
       const res = await fetch('/api/traces');
       traces = await res.json();
       traces.sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')));

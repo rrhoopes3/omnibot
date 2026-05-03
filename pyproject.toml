@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omnibot"
-version = "0.1.7"
-description = "OmniBot v0.1.7 trace polish"
+version = "0.1.8"
+description = "OmniBot v0.1.8 visible tools sandbox"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

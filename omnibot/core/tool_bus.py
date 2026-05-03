@@ -22,6 +22,15 @@ TOOL_CATEGORIES = {
 
 CORE_TOOLS = {"read_file", "list_directory", "find_files", "run_command", "run_python"}
 
+_TOOL_METADATA = {
+    "read_file": {"category": "filesystem", "risk": "low", "sandbox": "workspace path scoped"},
+    "list_directory": {"category": "filesystem", "risk": "low", "sandbox": "workspace path scoped"},
+    "find_files": {"category": "filesystem", "risk": "low", "sandbox": "workspace path scoped"},
+    "web_search": {"category": "browser", "risk": "low", "sandbox": "network request only"},
+    "run_command": {"category": "shell", "risk": "high", "sandbox": "workspace cwd + guardrails"},
+    "run_python": {"category": "python", "risk": "high", "sandbox": "workspace cwd + guardrails"},
+}
+
 _TASK_TOOL_HINTS: list[tuple[re.Pattern[str], list[str]]] = [
     (re.compile(r"\b(test|pytest|python|stack trace|traceback|failing|bug)\b", re.I), ["filesystem", "shell", "python"]),
     (re.compile(r"\b(file|read|directory|folder|code)\b", re.I), ["filesystem"]),
@@ -60,6 +69,8 @@ class ToolBus:
     def __init__(self, event_bus: EventBus, workspace: str | Path):
         self.event_bus = event_bus
         self.workspace = Path(workspace).resolve()
+        self.enable_shell = _env_flag("OMNIBOT_ENABLE_SHELL", default=True)
+        self.enable_python = _env_flag("OMNIBOT_ENABLE_PYTHON", default=True)
         self._handlers: dict[str, ToolHandler] = {}
         self._schemas: dict[str, dict[str, Any]] = {}
         self._register_builtin_tools()
@@ -82,6 +93,39 @@ class ToolBus:
         if only is None:
             return list(self._schemas.values())
         return [schema for name, schema in self._schemas.items() if name in only]
+
+    def manifest(self) -> dict[str, Any]:
+        tools = []
+        for name, schema in sorted(self._schemas.items()):
+            meta = _TOOL_METADATA.get(name, {})
+            tools.append(
+                {
+                    "name": name,
+                    "description": schema["description"],
+                    "category": meta.get("category", "other"),
+                    "risk": meta.get("risk", "medium"),
+                    "sandbox": meta.get("sandbox", "event logged"),
+                    "enabled": self._tool_enabled(name),
+                }
+            )
+        return {
+            "workspace": str(self.workspace),
+            "sandbox": {
+                "type": "workspace-scoped subprocess guardrails",
+                "hard_container": False,
+                "path_scope": "filesystem tools are restricted to workspace",
+                "shell_scope": "shell/python run with cwd set to workspace when enabled",
+                "guardrails": {
+                    "dangerous_command_patterns": len(_DANGEROUS_COMMANDS),
+                    "sensitive_path_patterns": len(_SENSITIVE_PATHS),
+                },
+            },
+            "toggles": {
+                "OMNIBOT_ENABLE_SHELL": self.enable_shell,
+                "OMNIBOT_ENABLE_PYTHON": self.enable_python,
+            },
+            "tools": tools,
+        }
 
     async def execute(
         self,
@@ -349,6 +393,9 @@ class ToolBus:
         return target
 
     def _guardrail_block(self, name: str, arguments: dict[str, Any]) -> str | None:
+        if not self._tool_enabled(name):
+            return f"Tool disabled by configuration: {name}"
+
         if name == "run_command":
             command = str(arguments.get("command", ""))
             for pattern in _DANGEROUS_COMMANDS:
@@ -367,9 +414,23 @@ class ToolBus:
                     return f"Blocked path outside workspace: {path}"
         return None
 
+    def _tool_enabled(self, name: str) -> bool:
+        if name == "run_command":
+            return self.enable_shell
+        if name == "run_python":
+            return self.enable_python
+        return True
+
     def _safe_args(self, arguments: dict[str, Any]) -> dict[str, Any]:
         safe = dict(arguments)
         for key, value in list(safe.items()):
             if isinstance(value, str) and len(value) > 400:
                 safe[key] = value[:400] + "... [truncated]"
         return safe
+
+
+def _env_flag(name: str, *, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
